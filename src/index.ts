@@ -460,6 +460,7 @@ async function main(): Promise<void> {
   // Scan page for roster
   console.log('generating roster...');
   const roster = await getRoster(page);
+  console.log(JSON.stringify(roster));
 
   // Set lineup
   console.log('setting lineup...');
