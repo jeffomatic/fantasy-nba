@@ -184,7 +184,7 @@ function setLineupParams(args: {
   for (let id of args.active.centers) active[id] = { pos: 'C' };
   for (let id of args.active.guards) active[id] = { pos: 'G' };
   for (let id of args.active.forwards) active[id] = { pos: 'F' };
-  for (let id of args.active.centers) active[id] = { pos: 'G-F-C' };
+  for (let id of args.active.gfc) active[id] = { pos: 'G-F-C' };
 
   const reserve = {};
   for (let { id, pos } of args.reserve) reserve[id] = { pos };
