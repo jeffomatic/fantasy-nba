@@ -357,10 +357,6 @@ function selectRoster(players: Player[]): Roster {
 }
 
 async function getRoster(page: puppeteer.Page): Promise<Roster> {
-  // Go to team home
-  console.log('loading team page...');
-  await page.goto(pages.teamHome.url);
-  await page.waitForSelector('.playerRow.row1:not(.empty)');
 
   // Pull player rows
   console.log('extracting starter information...');
