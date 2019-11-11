@@ -166,6 +166,10 @@ const pages = {
   },
   teamHome: {
     url: 'http://nothingbutnetolicky.basketball.cbssports.com/teams/13',
+    selectors: {
+      starterRow: '.playerRow.row1:not(.empty)',
+      benchRow: '.playerRow.row2:not(.empty)',
+    },
   },
 };
 
@@ -357,10 +361,9 @@ function selectRoster(players: Player[]): Roster {
 }
 
 async function getRoster(page: puppeteer.Page): Promise<Roster> {
-
   // Pull player rows
   console.log('extracting starter information...');
-  const starterRows = await page.$$('.playerRow.row1:not(.empty)');
+  const starterRows = await page.$$(pages.teamHome.selectors.starterRow);
   const starters = await Promise.all(
     starterRows.map((el, i) => {
       console.log(`processing starter ${i}`);
@@ -369,7 +372,7 @@ async function getRoster(page: puppeteer.Page): Promise<Roster> {
   );
 
   console.log('extracting bench information...');
-  const benchRows = await page.$$('.playerRow.row2:not(.empty)');
+  const benchRows = await page.$$(pages.teamHome.selectors.benchRow);
   const bench = await Promise.all(
     benchRows.map((el, i) => {
       console.log(`processing bench ${i}`);
@@ -451,7 +454,7 @@ async function main(): Promise<void> {
   // Go to team home
   console.log('loading team page...');
   await page.goto(pages.teamHome.url);
-  await page.waitForSelector('.playerRow.row1');
+  await page.waitForSelector(pages.teamHome.selectors.starterRow);
 
   // Get access token
   console.log('extracting access token...');
