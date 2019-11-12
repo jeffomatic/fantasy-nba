@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as moment from 'moment-timezone';
 import * as puppeteer from 'puppeteer';
 
-const testRoster = {
+const testLineup = {
   centers: [
     {
       id: '1647481',
@@ -280,7 +280,7 @@ async function getPlayerInfo(playerRowElement): Promise<Player | null> {
   return { id, name, positions, availability, rank };
 }
 
-interface Roster {
+interface Lineup {
   centers: Player[];
   guards: Player[];
   forwards: Player[];
@@ -288,7 +288,7 @@ interface Roster {
   reserve: Player[];
 }
 
-function selectRoster(players: Player[]): Roster {
+function calculateLineup(players: Player[]): Lineup {
   const guards: string[] = [];
   const forwards: string[] = [];
   const centers: string[] = [];
@@ -321,7 +321,7 @@ function selectRoster(players: Player[]): Roster {
   gfc.sort(comparePlayers);
 
   const taken = new Set<string>();
-  const roster = {
+  const lineup = {
     centers: [],
     guards: [],
     forwards: [],
@@ -339,28 +339,28 @@ function selectRoster(players: Player[]): Roster {
     }
   };
 
-  assignPlayer(centers, roster.centers);
-  assignPlayer(centers, roster.centers);
-  assignPlayer(guards, roster.guards);
-  assignPlayer(guards, roster.guards);
-  assignPlayer(guards, roster.guards);
-  assignPlayer(guards, roster.guards);
-  assignPlayer(forwards, roster.forwards);
-  assignPlayer(forwards, roster.forwards);
-  assignPlayer(forwards, roster.forwards);
-  assignPlayer(forwards, roster.forwards);
-  assignPlayer(gfc, roster.gfc);
-  assignPlayer(gfc, roster.gfc);
+  assignPlayer(centers, lineup.centers);
+  assignPlayer(centers, lineup.centers);
+  assignPlayer(guards, lineup.guards);
+  assignPlayer(guards, lineup.guards);
+  assignPlayer(guards, lineup.guards);
+  assignPlayer(guards, lineup.guards);
+  assignPlayer(forwards, lineup.forwards);
+  assignPlayer(forwards, lineup.forwards);
+  assignPlayer(forwards, lineup.forwards);
+  assignPlayer(forwards, lineup.forwards);
+  assignPlayer(gfc, lineup.gfc);
+  assignPlayer(gfc, lineup.gfc);
 
   for (let id of gfc) {
     if (taken.has(id)) continue;
-    roster.reserve.push(playersById[id]);
+    lineup.reserve.push(playersById[id]);
   }
 
-  return roster;
+  return lineup;
 }
 
-async function getRoster(page: puppeteer.Page): Promise<Roster> {
+async function fetchPlayers(page: puppeteer.Page): Promise<Player[]> {
   // Pull player rows
   console.log('extracting starter information...');
   const starterRows = await page.$$(pages.teamHome.selectors.starterRow);
@@ -380,28 +380,24 @@ async function getRoster(page: puppeteer.Page): Promise<Roster> {
     }),
   );
 
-  // Select roster
-  console.log('selecting roster...');
-  const roster = selectRoster(starters.concat(bench));
-
-  return roster;
+  return starters.concat(bench);
 }
 
-async function setLineup(
+async function commitLineup(
   page: puppeteer.Page,
   accessToken: string,
-  roster: Roster,
+  lineup: Lineup,
 ) {
   const requestBody = setLineupParams({
     team: 13,
     accessToken: accessToken,
     active: {
-      centers: roster.centers.map(p => p.id),
-      guards: roster.guards.map(p => p.id),
-      forwards: roster.forwards.map(p => p.id),
-      gfc: roster.gfc.map(p => p.id),
+      centers: lineup.centers.map(p => p.id),
+      guards: lineup.guards.map(p => p.id),
+      forwards: lineup.forwards.map(p => p.id),
+      gfc: lineup.gfc.map(p => p.id),
     },
-    reserve: roster.reserve.map(p => {
+    reserve: lineup.reserve.map(p => {
       return {
         id: p.id,
         pos: p.positions[0],
@@ -451,24 +447,23 @@ async function main(): Promise<void> {
     page.click(pages.login.selectors.loginButton),
   ]);
 
-  // Go to team home
   console.log('loading team page...');
   await page.goto(pages.teamHome.url);
   await page.waitForSelector(pages.teamHome.selectors.starterRow);
 
-  // Get access token
   console.log('extracting access token...');
   const accessToken = await page.evaluate(() => window['CBSi']['token']);
 
-  // Scan page for roster
-  console.log('generating roster...');
-  const roster = await getRoster(page);
-  console.log(JSON.stringify(roster));
+  console.log('fetching players...');
+  const players = await fetchPlayers(page);
 
-  // Set lineup
+  console.log('calculating lineup...');
+  const lineup = calculateLineup(players);
+  console.log(JSON.stringify(lineup));
+
   console.log('setting lineup...');
-  const result = await setLineup(page, accessToken, roster);
-  console.log(result);
+  // const result = await commitLineup(page, accessToken, lineup);
+  // console.log(result);
 
   await browser.close();
 }
