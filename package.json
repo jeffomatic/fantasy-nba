@@ -18,6 +18,7 @@
     "typescript": "^3.7.2"
   },
   "dependencies": {
+    "@slack/web-api": "^5.4.0",
     "moment-timezone": "^0.5.27",
     "puppeteer": "^2.0.0"
   },

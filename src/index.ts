@@ -2,6 +2,9 @@ import * as fs from 'fs';
 import * as moment from 'moment-timezone';
 import * as puppeteer from 'puppeteer';
 
+import { Availability, Lineup, Player } from './common';
+import { publishLineup } from './publish';
+
 const testLineup = {
   centers: [
     {
@@ -227,21 +230,6 @@ const api = {
   },
 };
 
-enum Availability {
-  Playing,
-  Questionable,
-  NotPlaying,
-  Injured,
-}
-
-interface Player {
-  id: string;
-  name: string;
-  positions: string[];
-  availability: Availability;
-  rank: number;
-}
-
 async function getPlayerInfo(playerRowElement): Promise<Player | null> {
   const info = await playerRowElement.$('td:nth-of-type(3)');
   if (info === null) return null;
@@ -261,16 +249,26 @@ async function getPlayerInfo(playerRowElement): Promise<Player | null> {
     node.innerText.split(' | ')[0].split(','),
   );
 
-  const injured = (await info.$$('.icon-red_cross')).length > 0;
+  let availability = Availability.Playing;
+
   const notPlaying = await playerRowElement.$eval(
     'td:nth-of-type(4)',
     n => n.innerHTML.trim().toLowerCase() === 'no game',
   );
-  let availability = Availability.Playing;
-  if (injured) {
-    availability = Availability.Injured;
-  } else if (notPlaying) {
+  if (notPlaying) {
     availability = Availability.NotPlaying;
+  }
+
+  const injuryReport = await info.$('[subtab="Injury Report"]');
+  if (injuryReport !== null) {
+    const injuryLabel: string = await injuryReport.evaluate(n =>
+      n.getAttribute('aria-label'),
+    );
+    if (injuryLabel.toLowerCase().indexOf('game time decision') >= 0) {
+      availability = Availability.Questionable;
+    } else {
+      availability = Availability.Injured;
+    }
   }
 
   const rank = await playerRowElement.$eval('td:nth-of-type(7)', n =>
@@ -278,14 +276,6 @@ async function getPlayerInfo(playerRowElement): Promise<Player | null> {
   );
 
   return { id, name, positions, availability, rank };
-}
-
-interface Lineup {
-  centers: Player[];
-  guards: Player[];
-  forwards: Player[];
-  gfc: Player[];
-  reserve: Player[];
 }
 
 function calculateLineup(players: Player[]): Lineup {
@@ -462,8 +452,11 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(lineup));
 
   console.log('setting lineup...');
-  // const result = await commitLineup(page, accessToken, lineup);
-  // console.log(result);
+  const result = await commitLineup(page, accessToken, lineup);
+  console.log(result);
+
+  console.log('publishing results...');
+  await publishLineup(creds.slackApiToken, lineup);
 
   await browser.close();
 }
