@@ -1,3 +1,4 @@
+import * as moment from 'moment-timezone';
 import * as slack from '@slack/web-api';
 
 import { Availability, Lineup, Player } from './model';
@@ -29,12 +30,12 @@ export function renderPlayer(p: Player): string {
   )})`;
 }
 
-export async function publishLineup(
-  slackApiToken: string,
-  lineup: Lineup,
-): Promise<void> {
-  const slackClient = new slack.WebClient(slackApiToken);
-
+export async function postMessage(args: {
+  token: string;
+  blocks?: (slack.KnownBlock | slack.Block)[];
+  text?: string;
+}): Promise<void> {
+  const slackClient = new slack.WebClient(args.token);
   const clResult = (await slackClient.conversations.list()) as ConversationsListResult;
   const channels = clResult.channels
     .filter(c => c.is_member)
@@ -44,6 +45,21 @@ export async function publishLineup(
       return 0;
     });
 
+  const result = await slackClient.chat.postMessage({
+    channel: channels[0].id,
+    blocks: args.blocks,
+    text: args.text,
+  });
+
+  if (!result.ok) {
+    throw new Error(`Slack error: ${result.error}`);
+  }
+}
+
+export async function publishLineup(
+  slackApiToken: string,
+  lineup: Lineup,
+): Promise<void> {
   const body = `
 *Centers*
 ${lineup.centers.map(renderPlayer).join('\n')}
@@ -60,14 +76,15 @@ ${lineup.gfc.map(renderPlayer).join('\n')}
 *Reserve*
 ${lineup.reserve.map(renderPlayer).join('\n')}
 `;
-  const cpmResult = await slackClient.chat.postMessage({
-    channel: channels[0].id,
+
+  postMessage({
+    token: slackApiToken,
     blocks: [
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `:basketball: *Current lineup*`,
+          text: `:basketball: *Lineup for ${moment().format('MMM Do YY')}*`,
         },
       },
       {
@@ -78,10 +95,5 @@ ${lineup.reserve.map(renderPlayer).join('\n')}
         },
       },
     ],
-    text: null,
   });
-
-  if (!cpmResult.ok) {
-    throw new Error(`Slack error: ${cpmResult.error}`);
-  }
 }

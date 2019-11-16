@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as puppeteer from 'puppeteer';
 
 import * as cbs from './cbs';
-import { calculateLineup } from './model';
+import { calculateLineup, Lineup } from './model';
 import { retry } from './retry';
 import * as slack from './slack';
 
@@ -12,8 +12,13 @@ interface Creds {
   slackApiToken: string;
 }
 
-async function main(creds: Creds, args: Set<string>): Promise<void> {
-  const puppeteerArgs = args.has('no-sandbox')
+async function getAndPersistLineup(args: {
+  email: string;
+  password: string;
+  noSandbox: boolean;
+  persist: boolean;
+}): Promise<Lineup> {
+  const puppeteerArgs = args.noSandbox
     ? {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       }
@@ -26,8 +31,8 @@ async function main(creds: Creds, args: Set<string>): Promise<void> {
     3,
     async () =>
       await cbs.getPlayers(page, {
-        email: creds.email,
-        password: creds.password,
+        email: args.email,
+        password: args.password,
       }),
   );
 
@@ -35,19 +40,48 @@ async function main(creds: Creds, args: Set<string>): Promise<void> {
   const lineup = calculateLineup(players);
   console.log(JSON.stringify(lineup));
 
-  if (args.has('persist')) {
+  if (args.persist) {
     console.log('setting lineup...');
     const result = await retry(
       3,
       async () => await cbs.persistLineup(page, accessToken, lineup),
     );
     console.log(result);
-
-    console.log('publishing results...');
-    await slack.publishLineup(creds.slackApiToken, lineup);
   }
 
   await browser.close();
+
+  return lineup;
+}
+
+async function main(creds: Creds, args: Set<string>): Promise<void> {
+  let lineup: Lineup;
+  let getAndPersistError: Error;
+  try {
+    lineup = await getAndPersistLineup({
+      email: creds.email,
+      password: creds.password,
+      noSandbox: args.has('no-sandbox'),
+      persist: args.has('persist'),
+    });
+  } catch (e) {
+    getAndPersistError = e;
+    console.log(`getAndPersistLineup error: ${e}`);
+    console.log('backtrace:');
+    console.log(e.stack);
+  }
+
+  if (args.has('publish')) {
+    console.log('publishing results...');
+    if (lineup !== undefined) {
+      await slack.publishLineup(creds.slackApiToken, lineup);
+    } else {
+      await slack.postMessage({
+        token: creds.slackApiToken,
+        text: `:warning: *Error processing lineup*\n\`\`\`\n${getAndPersistError}\n\`\`\``,
+      });
+    }
+  }
 
   console.log('done');
 }
