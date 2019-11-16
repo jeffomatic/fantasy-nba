@@ -187,13 +187,13 @@ function setLineupParams(args: {
   };
   reserve: { id: string; pos: string }[];
 }): string {
-  const active = {};
+  const active: { [key: string]: { pos: string } } = {};
   for (let id of args.active.centers) active[id] = { pos: 'C' };
   for (let id of args.active.guards) active[id] = { pos: 'G' };
   for (let id of args.active.forwards) active[id] = { pos: 'F' };
   for (let id of args.active.gfc) active[id] = { pos: 'G-F-C' };
 
-  const reserve = {};
+  const reserve: { [key: string]: { pos: string } } = {};
   for (let { id, pos } of args.reserve) reserve[id] = { pos };
 
   const payload = {
@@ -230,7 +230,9 @@ const api = {
   },
 };
 
-async function getPlayerInfo(playerRowElement): Promise<Player | null> {
+async function getPlayerInfo(
+  playerRowElement: puppeteer.ElementHandle,
+): Promise<Player | null> {
   const info = await playerRowElement.$('td:nth-of-type(3)');
   if (info === null) return null;
 
@@ -241,12 +243,12 @@ async function getPlayerInfo(playerRowElement): Promise<Player | null> {
         .trim()
         .split('/')
         .slice(-1)[0],
-      name: n.innerText,
+      name: (n as HTMLElement).innerText,
     };
   });
 
-  const positions = await info.$eval('.playerPositionAndTeam', node =>
-    node.innerText.split(' | ')[0].split(','),
+  const positions = await info.$eval('.playerPositionAndTeam', n =>
+    (n as HTMLElement).innerText.split(' | ')[0].split(','),
   );
 
   let availability = Availability.Playing;
@@ -272,7 +274,7 @@ async function getPlayerInfo(playerRowElement): Promise<Player | null> {
   }
 
   const rank = await playerRowElement.$eval('td:nth-of-type(7)', n =>
-    parseInt(n.innerText.trim()),
+    parseInt((n as HTMLElement).innerText.trim()),
   );
 
   return { id, name, positions, availability, rank };
@@ -311,7 +313,13 @@ function calculateLineup(players: Player[]): Lineup {
   gfc.sort(comparePlayers);
 
   const taken = new Set<string>();
-  const lineup = {
+  const lineup: {
+    centers: Player[];
+    guards: [];
+    forwards: Player[];
+    gfc: Player[];
+    reserve: Player[];
+  } = {
     centers: [],
     guards: [],
     forwards: [],
@@ -426,6 +434,12 @@ interface Creds {
   slackApiToken: string;
 }
 
+declare global {
+  interface Window {
+    CBSi: { token: string };
+  }
+}
+
 async function main(creds?: Creds): Promise<void> {
   if (creds === undefined) {
     creds = {
@@ -463,12 +477,12 @@ async function main(creds?: Creds): Promise<void> {
   const lineup = calculateLineup(players);
   console.log(JSON.stringify(lineup));
 
-  console.log('setting lineup...');
-  const result = await commitLineup(page, accessToken, lineup);
-  console.log(result);
+  // console.log('setting lineup...');
+  // const result = await commitLineup(page, accessToken, lineup);
+  // console.log(result);
 
-  console.log('publishing results...');
-  await publishLineup(creds.slackApiToken, lineup);
+  // console.log('publishing results...');
+  // await publishLineup(creds.slackApiToken, lineup);
 
   await browser.close();
 
