@@ -1,6 +1,6 @@
 import * as slack from '@slack/web-api';
 
-import { Availability, Lineup, Player } from './common';
+import { Availability, Lineup, Player } from './model';
 
 interface ConversationsListResult extends slack.WebAPICallResult {
   channels: {
