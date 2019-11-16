@@ -213,7 +213,7 @@ async function fetchPlayers(page: puppeteer.Page): Promise<Player[]> {
   return starters.concat(bench);
 }
 
-async function commitLineup(
+async function persistLineup(
   page: puppeteer.Page,
   accessToken: string,
   lineup: Lineup,
@@ -308,7 +308,7 @@ async function main(creds: Creds, args: Set<string>): Promise<void> {
 
   if (args.has('persist')) {
     console.log('setting lineup...');
-    const result = await commitLineup(page, accessToken, lineup);
+    const result = await persistLineup(page, accessToken, lineup);
     console.log(result);
 
     console.log('publishing results...');
