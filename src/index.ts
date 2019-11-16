@@ -62,21 +62,6 @@ function setLineupParams(args: {
   return params.toString();
 }
 
-const api = {
-  // content-type: application/x-www-form-urlencoded; charset=UTF-8
-  // params:
-  // - payload: {"team":"13","active":{"555988":{"pos":"G"}},"reserve":{"2842761":{"pos":"G"}},"point":"20191110"}
-  // - access_token: ...
-  // - version: 2.0
-  // - resultFormat: json
-  // - responseFormat: json
-  setLineup: {
-    method: 'put',
-    url:
-      'http://nothingbutnetolicky.basketball.cbssports.com/api/league/transactions/lineup',
-  },
-};
-
 async function getPlayerInfo(
   playerRowElement: puppeteer.ElementHandle,
 ): Promise<Player | null> {
