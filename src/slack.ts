@@ -84,7 +84,7 @@ ${lineup.reserve.map(renderPlayer).join('\n')}
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `:basketball: *Lineup for ${moment().format('MMM Do YY')}*`,
+          text: `:basketball: *Lineup for ${moment().format('YYYY-M-D')}*`,
         },
       },
       {
