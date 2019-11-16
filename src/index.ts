@@ -440,7 +440,7 @@ declare global {
   }
 }
 
-async function main(creds: Creds): Promise<void> {
+async function main(creds: Creds, opts: { persist: boolean }): Promise<void> {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
@@ -469,12 +469,14 @@ async function main(creds: Creds): Promise<void> {
   const lineup = calculateLineup(players);
   console.log(JSON.stringify(lineup));
 
-  // console.log('setting lineup...');
-  // const result = await commitLineup(page, accessToken, lineup);
-  // console.log(result);
+  if (opts.persist) {
+    console.log('setting lineup...');
+    const result = await commitLineup(page, accessToken, lineup);
+    console.log(result);
 
-  // console.log('publishing results...');
-  // await publishLineup(creds.slackApiToken, lineup);
+    console.log('publishing results...');
+    await publishLineup(creds.slackApiToken, lineup);
+  }
 
   await browser.close();
 
@@ -494,7 +496,9 @@ if (require.main === module) {
     };
   }
 
-  main(creds).catch(err => {
+  // process.argv[0] is the runtime, either node or ts-node
+  // process.argv[1] is the entrypoint script
+  main(creds, { persist: process.argv[2] === 'persist' }).catch(err => {
     console.log('uncaught error:');
     console.log(err);
     process.exit(1);
