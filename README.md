@@ -14,6 +14,12 @@ Name | Description
 `PASSWORD` | login password for CBS Fantasy
 `SLACK_API_TOKEN` | API token for Slack
 
+Set up a scheduler job for once per day:
+
+```
+node dist/index.js no-sandbox persist publish
+```
+
 ## Slack setup
 
 The app will post to a channel called `#basketball` if it is available. Otherwise, the app will post to the first channel it can find in which the authorizing user is a member.
