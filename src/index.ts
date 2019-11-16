@@ -440,8 +440,13 @@ declare global {
   }
 }
 
-async function main(creds: Creds, opts: { persist: boolean }): Promise<void> {
-  const browser = await puppeteer.launch();
+async function main(creds: Creds, args: Set<string>): Promise<void> {
+  const puppeteerArgs = args.has('no-sandbox')
+    ? {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      }
+    : {};
+  const browser = await puppeteer.launch(puppeteerArgs);
   const page = await browser.newPage();
 
   // Log in
@@ -469,7 +474,7 @@ async function main(creds: Creds, opts: { persist: boolean }): Promise<void> {
   const lineup = calculateLineup(players);
   console.log(JSON.stringify(lineup));
 
-  if (opts.persist) {
+  if (args.has('persist')) {
     console.log('setting lineup...');
     const result = await commitLineup(page, accessToken, lineup);
     console.log(result);
@@ -498,7 +503,8 @@ if (require.main === module) {
 
   // process.argv[0] is the runtime, either node or ts-node
   // process.argv[1] is the entrypoint script
-  main(creds, { persist: process.argv[2] === 'persist' }).catch(err => {
+  const args = new Set<string>(process.argv.slice(2));
+  main(creds, args).catch(err => {
     console.log('uncaught error:');
     console.log(err);
     process.exit(1);
