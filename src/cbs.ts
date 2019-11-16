@@ -192,7 +192,6 @@ async function getPlayerInfo(
 }
 
 async function fetchPlayers(page: puppeteer.Page): Promise<Player[]> {
-  // Pull player rows
   console.log('extracting starter information...');
   const starterRows = await page.$$(pages.teamHome.selectors.starterRow);
   const starters = await Promise.all(
