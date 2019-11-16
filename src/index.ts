@@ -440,15 +440,7 @@ declare global {
   }
 }
 
-async function main(creds?: Creds): Promise<void> {
-  if (creds === undefined) {
-    creds = {
-      email: process.env['EMAIL'],
-      password: process.env['PASSWORD'],
-      slackApiToken: process.env['SLACK_API_TOKEN'],
-    };
-  }
-
+async function main(creds: Creds): Promise<void> {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
@@ -491,7 +483,16 @@ async function main(creds?: Creds): Promise<void> {
 
 if (require.main === module) {
   const credsPath = './creds.json';
-  const creds = JSON.parse(fs.readFileSync(credsPath).toString()) as Creds;
+  let creds: Creds;
+  if (fs.existsSync(credsPath)) {
+    creds = JSON.parse(fs.readFileSync(credsPath).toString()) as Creds;
+  } else {
+    creds = {
+      email: process.env['EMAIL'],
+      password: process.env['PASSWORD'],
+      slackApiToken: process.env['SLACK_API_TOKEN'],
+    };
+  }
 
   main(creds).catch(err => {
     console.log('uncaught error:');
@@ -499,5 +500,3 @@ if (require.main === module) {
     process.exit(1);
   });
 }
-
-exports.handler = main;
