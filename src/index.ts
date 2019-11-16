@@ -420,8 +420,20 @@ async function commitLineup(
   }, requestBody);
 }
 
-async function main(): Promise<void> {
-  const creds = JSON.parse(fs.readFileSync('./creds.json').toString());
+interface Creds {
+  email: string;
+  password: string;
+  slackApiToken: string;
+}
+
+async function main(creds?: Creds): Promise<void> {
+  if (creds === undefined) {
+    creds = {
+      email: process.env['EMAIL'],
+      password: process.env['PASSWORD'],
+      slackApiToken: process.env['SLACK_API_TOKEN'],
+    };
+  }
 
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -459,12 +471,19 @@ async function main(): Promise<void> {
   await publishLineup(creds.slackApiToken, lineup);
 
   await browser.close();
+
+  console.log('done');
 }
 
-main()
-  .then(() => console.log('done'))
-  .catch(err => {
+if (require.main === module) {
+  const credsPath = './creds.json';
+  const creds = JSON.parse(fs.readFileSync(credsPath).toString()) as Creds;
+
+  main(creds).catch(err => {
     console.log('uncaught error:');
     console.log(err);
     process.exit(1);
   });
+}
+
+exports.handler = main;
