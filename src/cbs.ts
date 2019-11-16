@@ -27,11 +27,10 @@ const pages = {
   },
 };
 
-export async function getLineup(
+export async function getPlayers(
   page: puppeteer.Page,
   creds: { email: string; password: string },
 ): Promise<[Player[], string]> {
-  // Log in
   console.log('logging in...');
   await page.goto(pages.login.url);
   await page.waitForSelector(pages.login.selectors.emailInput);

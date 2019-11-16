@@ -3,6 +3,7 @@ import * as puppeteer from 'puppeteer';
 
 import * as cbs from './cbs';
 import { calculateLineup } from './model';
+import { retry } from './retry';
 import * as slack from './slack';
 
 interface Creds {
@@ -21,10 +22,14 @@ async function main(creds: Creds, args: Set<string>): Promise<void> {
   const page = await browser.newPage();
 
   console.log('fetching players...');
-  const [players, accessToken] = await cbs.getLineup(page, {
-    email: creds.email,
-    password: creds.password,
-  });
+  const [players, accessToken] = await retry(
+    3,
+    async () =>
+      await cbs.getPlayers(page, {
+        email: creds.email,
+        password: creds.password,
+      }),
+  );
 
   console.log('calculating lineup...');
   const lineup = calculateLineup(players);
@@ -32,7 +37,10 @@ async function main(creds: Creds, args: Set<string>): Promise<void> {
 
   if (args.has('persist')) {
     console.log('setting lineup...');
-    const result = await cbs.persistLineup(page, accessToken, lineup);
+    const result = await retry(
+      3,
+      async () => await cbs.persistLineup(page, accessToken, lineup),
+    );
     console.log(result);
 
     console.log('publishing results...');
