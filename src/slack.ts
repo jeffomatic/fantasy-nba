@@ -24,7 +24,7 @@ function renderAvailability(a: Availability): string {
   }
 }
 
-export function renderPlayer(p: Player): string {
+function renderPlayer(p: Player): string {
   return `- ${p.name} *${p.positions.join('')}* (${renderAvailability(
     p.availability,
   )})`;
